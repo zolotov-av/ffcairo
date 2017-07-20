@@ -226,6 +226,7 @@ distclean: clean deb_clean
 	rm -f deb/DEBIAN/control libffcairo-*.deb
 	rm -f deb_avc/DEBIAN/control avc_server-*.deb
 	rm -f config.log config.status ffcairo/config.h
+	rm -f avc_feeder.log  avc_server.log
 	rm -rf autom4te.cache
 	rm -rf libffcairo.a $(PROGS)
 	rm -rf demo1-text demo2-makevideo demo3-remux
@@ -240,4 +241,3 @@ deb_clean:
 	rm -rf deb/usr
 	rm -rf deb_avc/usr
 	rm -rf libffcairo-*.deb avc_server-*.deb
-
