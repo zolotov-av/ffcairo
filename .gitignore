@@ -19,3 +19,9 @@ lib*.a
 /demo1-text
 /demo2-makevideo
 /demo3-remux
+
+# deb-package building
+/deb/usr/
+/deb_avc/usr/
+/avc_server-*.deb
+/libffcairo-*.deb
