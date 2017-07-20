@@ -1,0 +1,9 @@
+Package: avc-server
+Version: 0.1.1
+Section: misc
+Source: ffcairo
+Architecture: @DEB_ARCH@
+Maintainer: Alex V. Zolotov <zolotov-alex@shamangrad.net>
+Priority: extra
+Depends: mt-ffmpeg
+Description: audio-video conference server and tools

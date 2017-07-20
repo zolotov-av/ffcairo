@@ -1,0 +1,249 @@
+
+############################ AUTOCONF VARS ###################################
+
+# архитектура на которой будет происходить компиляция
+BUILD_SYSTEM:=@build@
+BUILD_CPU:=@build_cpu@
+BUILD_VENDOR:=@build_vendor@
+BUILD_OS:=@build_os@
+
+# архитектура на которой будут запускаться скомпилированные программы
+HOST_SYSTEM:=@host@
+HOST_CPU:=@host_cpu@
+HOST_VENDOR:=@host_vendor@
+HOST_OS:=@host_os@
+
+# целевая архитектура компилируемого компилятора
+#
+# Пояснение: это нужно для компиляции компиляторов, в частности самого gcc,
+#   задает архитектуру, для которой будущий (компилируемый) компилятор
+#   будет компилировать программы. В большинстве проектов не требуется.
+TARGET_SYSTEM:=@target@
+TARGET_CPU:=@target_cpu@
+TARGET_VENDOR:=@target_vendor@
+TARGET_OS:=@target_os@
+
+# архитектура для которой будет собираться deb-пакет.
+# сборщик пакетов и компилятор имеют разную терминлогию,
+# в скрипте configure мы транслируем HOST_CPU в имя архитектуры которую
+# ожидает менеджер пакетов
+DEB_ARCH:=@DEB_ARCH@
+
+# кодовое имя целевой операционной системы, задается произвольно через
+# --with-codename и используется только для того, чтобы было меньше путаницы
+# с пакетами, для какой ОС они собирались
+CODENAME:=@CODENAME@
+
+CPPFLAGS=@CPPFLAGS@
+
+LDFLAGS=@LDFLAGS@
+
+# configure может снабдить нас дополнительными опциями компилятора
+# так же мы можем передавать свои опции компилятора в configure
+# через одноименную переменную окружения и они появятся здесь
+CXXFLAGS=@CXXFLAGS@
+
+# берем имя компилятора, которое дает нам configure и доплняем его опциями
+CXX:=@CXX@ $(CPPFLAGS) $(CXXFLAGS) -ffunction-sections -I.
+
+LD=@CXX@ -Wl,--gc-sections
+
+LIBS=-lswscale -lavutil -lavformat -lavcodec -lcairo -lnano2 -lstdc++
+
+# можно сделать по аналогии с $(CXX)
+AR:=ar
+RANLIB:=ranlib
+
+############################### VARS #########################################
+
+# список программ для сборки
+PROGS+=avc_server
+PROGS+=avc_feeder
+
+# список deb-пакетов для сборки
+DEB_FFCAIRO:=libffcairo-$(CODENAME)-$(DEB_ARCH).deb
+DEB_AVC:=avc_server-$(CODENAME)-$(DEB_ARCH).deb
+
+# объектные модули которые пойдут в программу
+OBJECTS+=obj/avc_server.o
+
+# объектные модули которые пойдут в библиотеку
+LIBOBJECTS+=obj/ffcimage.o
+LIBOBJECTS+=obj/ffcmuxer.o
+LIBOBJECTS+=obj/ffcdemuxer.o
+LIBOBJECTS+=obj/scale.o
+LIBOBJECTS+=obj/ffcmisc.o
+#
+LIBOBJECTS+=obj/avc_engine.o
+LIBOBJECTS+=obj/avc_listen.o
+LIBOBJECTS+=obj/avc_stream.o
+LIBOBJECTS+=obj/avc_channel.o
+LIBOBJECTS+=obj/avc_agent.o
+LIBOBJECTS+=obj/avc_http.o
+LIBOBJECTS+=obj/avc_scene.o
+LIBOBJECTS+=obj/avc_feedagent.o
+LIBOBJECTS+=obj/avc_time.o
+LIBOBJECTS+=obj/avc_encoder.o
+LIBOBJECTS+=obj/avc_decoder.o
+
+############################# GENERIC RULES ##################################
+
+# .PHONY указывает цели которые не создают файлов.
+.PHONY: all install deb clean distclean
+
+# первая цель - главная, она будет запускаться когда цель явно не указана
+all: libffcairo.a progs demo
+
+.PHONY: progs
+progs: $(PROGS)
+
+.PHONY: demo
+demo: demo1-text demo2-makevideo demo3-remux
+
+.PHONY: test
+test: test5 test6
+
+# сборка deb-пакетов, просто короткая цель чтобы не вспоминать имя пакета
+.PHONY: deb
+deb: deb_ffcairo deb_avc
+
+# установка файлов
+# примечение: будем отходить от этой практики, рекомендуется создавать пакет
+# и устанавливать через менеджер пакетов.
+.PHONY: install
+install: $(PROGS)
+	# TODO...
+
+.PHONY: deb_ffcairo deb_ffcairo_clean deb_ffcairo_install
+deb_ffcairo: deb_ffcairo_clean deb_ffcairo_install
+	fakeroot dpkg-deb --build deb $(DEB_FFCAIRO)
+
+deb_ffcairo_clean:
+	rm -rf deb/usr
+	rm -rf libffcairo-*.deb
+
+deb_ffcairo_install:
+	mkdir -p deb/usr/include/
+	mkdir -p deb/usr/lib/
+	mkdir -p deb/usr/share/ffcairo/
+	install -m 0644 ffcairo/*.h deb/usr/include/
+	install -m 0644 libffcairo.a deb/usr/lib/
+	install -m 0644 README deb/usr/share/ffcairo/
+	install -m 0644 Changelog deb/usr/share/ffcairo/
+
+.PHONY: deb_avc deb_avc_clean deb_avc_install
+deb_avc: deb_avc_clean deb_avc_install
+	fakeroot dpkg-deb --build deb_avc $(DEB_AVC)
+
+deb_avc_clean:
+	rm -rf deb_avc/usr
+	rm -rf avc_server-*.deb
+
+deb_avc_install:
+	mkdir -p deb_avc/usr/bin/
+	mkdir -p deb_avc/usr/share/avc_server/
+	install -m 0755 avc_server deb_avc/usr/bin/
+	install -m 0755 avc_feeder deb_avc/usr/bin/
+	install -m 0644 README deb_avc/usr/share/avc_server/
+	install -m 0644 Changelog deb_avc/usr/share/avc_server/
+
+########################## BUILD RULES #######################################
+
+avc_server: avc_server.cpp libffcairo.a ffcairo/config.h
+	$(CXX) $(LDFLAGS) -o avc_server avc_server.cpp -L. -lffcairo $(LIBS) -ludns
+
+avc_feeder: avc_feeder.cpp libffcairo.a ffcairo/config.h
+	$(CXX) $(LDFLAGS) -o avc_feeder avc_feeder.cpp -L. -lffcairo $(LIBS) -ludns
+
+test5: test5-ffc.cpp libffcairo.a
+	$(CXX) $(LDFLAGS) -o test5 test5-ffc.cpp -L. -lffcairo $(LIBS)
+
+test6: test6-pts.cpp libffcairo.a
+	$(CXX) $(LDFLAGS) -o test6 test6-pts.cpp -L. -lffcairo $(LIBS)
+
+demo1-text: demo1-text.cpp libffcairo.a ffcairo/config.h
+	$(CXX) $(LDFLAGS) -o demo1-text demo1-text.cpp -L. -lffcairo $(LIBS)
+
+demo2-makevideo: demo2-makevideo.cpp libffcairo.a ffcairo/config.h
+	$(CXX) $(LDFLAGS) -o demo2-makevideo demo2-makevideo.cpp -L. -lffcairo $(LIBS)
+
+demo3-remux: demo3-remux.cpp libffcairo.a
+	$(CXX) $(LDFLAGS) -o demo3-remux demo3-remux.cpp -L. -lffcairo $(LIBS)
+
+libffcairo.a: $(LIBOBJECTS) ffcairo/config.h
+	$(AR) rc libffcairo.a $(LIBOBJECTS)
+	$(RANLIB) libffcairo.a
+
+ffcairo/ffctypes.h: ffcairo/config.h
+
+obj/ffcimage.o: ffcairo/ffcimage.cpp ffcairo/ffcimage.h ffcairo/ffctypes.h
+	$(CXX) -c ffcairo/ffcimage.cpp -o obj/ffcimage.o
+
+obj/ffcmuxer.o: ffcairo/ffcmuxer.cpp ffcairo/ffcmuxer.h ffcairo/ffctypes.h
+	$(CXX) -c ffcairo/ffcmuxer.cpp -o obj/ffcmuxer.o
+
+obj/ffcdemuxer.o: ffcairo/ffcdemuxer.cpp ffcairo/ffcdemuxer.h ffcairo/ffctypes.h
+	$(CXX) -c ffcairo/ffcdemuxer.cpp -o obj/ffcdemuxer.o
+
+obj/scale.o: ffcairo/scale.cpp ffcairo/scale.h ffcairo/ffctypes.h
+	$(CXX) -c ffcairo/scale.cpp -o obj/scale.o
+
+obj/ffcmisc.o: ffcairo/ffcmisc.cpp ffcairo/ffcmisc.h ffcairo/ffctypes.h
+	$(CXX) -c ffcairo/ffcmisc.cpp -o obj/ffcmisc.o
+
+obj/avc_engine.o: ffcairo/avc_engine.cpp ffcairo/avc_engine.h
+	$(CXX) -c ffcairo/avc_engine.cpp -o obj/avc_engine.o
+
+obj/avc_listen.o: ffcairo/avc_listen.cpp ffcairo/avc_listen.h ffcairo/avc_engine.h
+	$(CXX) -c ffcairo/avc_listen.cpp -o obj/avc_listen.o
+
+obj/avc_stream.o: ffcairo/avc_stream.cpp ffcairo/avc_stream.h
+	$(CXX) -c ffcairo/avc_stream.cpp -o obj/avc_stream.o
+
+obj/avc_channel.o: ffcairo/avc_channel.cpp ffcairo/avc_channel.h ffcairo/avc_stream.h ffcairo/avc_engine.h
+	$(CXX) -c ffcairo/avc_channel.cpp -o obj/avc_channel.o
+
+obj/avc_agent.o: ffcairo/avc_agent.cpp ffcairo/avc_agent.h
+	$(CXX) -c ffcairo/avc_agent.cpp -o obj/avc_agent.o
+
+obj/avc_http.o: ffcairo/avc_http.cpp ffcairo/avc_http.h ffcairo/avc_engine.h
+	$(CXX) -c ffcairo/avc_http.cpp -o obj/avc_http.o
+
+obj/avc_scene.o: ffcairo/avc_scene.cpp ffcairo/avc_scene.h
+	$(CXX) -c ffcairo/avc_scene.cpp -o obj/avc_scene.o
+
+obj/avc_feedagent.o: ffcairo/avc_feedagent.cpp ffcairo/avc_feedagent.h
+	$(CXX) -c ffcairo/avc_feedagent.cpp -o obj/avc_feedagent.o
+
+obj/avc_time.o: ffcairo/avc_time.cpp ffcairo/avc_time.h
+	$(CXX) -c ffcairo/avc_time.cpp -o obj/avc_time.o
+
+obj/avc_encoder.o: ffcairo/avc_encoder.cpp ffcairo/avc_encoder.h
+	$(CXX) -c ffcairo/avc_encoder.cpp -o obj/avc_encoder.o
+
+obj/avc_decoder.o: ffcairo/avc_decoder.cpp ffcairo/avc_decoder.h
+	$(CXX) -c ffcairo/avc_decoder.cpp -o obj/avc_decoder.o
+
+########################### CLEAN RULES ######################################
+
+# полная очистка
+distclean: clean deb_clean
+	rm -f Makefile
+	rm -f deb/DEBIAN/control libffcairo-*.deb
+	rm -f deb_avc/DEBIAN/control avc_server-*.deb
+	rm -f config.log config.status ffcairo/config.h
+	rm -rf autom4te.cache
+	rm -rf libffcairo.a $(PROGS) test5 test6
+	rm -rf demo1-text demo2-makevideo demo3-remux
+
+# простая очистка, промежуточные файлы, но оставляет целевые
+clean:
+	rm -f obj/*.o
+
+# зачистка в каталоге deb-пакета
+.PHONY: deb_clean
+deb_clean:
+	rm -rf deb/usr
+	rm -rf deb_avc/usr
+	rm -rf libffcairo-*.deb avc_server-*.deb
+

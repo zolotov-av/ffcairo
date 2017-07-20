@@ -1,0 +1,97 @@
+
+AC_PREREQ(2.59)
+AC_INIT(ffcairo, 0.1)
+
+# указываем ожидаемый путь к любому файлу-исходнику, дабы configure
+# мог убедиться что исходники лежат на своем месте
+AC_CONFIG_SRCDIR([ffcairo/config.h.in])
+
+# каталог со вспомогательными утилитами, нужно для configure
+# где их брать непонятно... магия... где-то в анналах automake
+AC_CONFIG_AUX_DIR(config)
+
+# с помощью этой директивы, мы можем передать переменные из configure
+# в заголовчный файл, например в config.h, например в зависимости
+# от архитектуры или опций переданных в configure определить макросы
+# для условной компиляции.
+#
+# чтобы реально передать переменную, нужно еще вызывать AC_DEFINE,
+# а эта команда только указывает в какой файл нужно запихнуть.
+# Файл генерируется на основе шаблона, если он не указан в команде, то
+# к имени файла прибавляется .in - было config.h, станет config.h.in,
+# так что после этого править надо *.in файл
+AC_CONFIG_HEADER([ffcairo/config.h])
+
+# опредяляем архитектуры, где компилируем, на чем компилируем
+# и целевую архитектуру (последнее значимо только для компиляции компиляторов)
+AC_CANONICAL_BUILD
+AC_CANONICAL_HOST
+AC_CANONICAL_TARGET
+
+# Все возможные проверки, проверить можно что угодно, от наличия в системе
+# компилятора, библиотек, функции в библиотеки и прочего на что хватит фантазия
+AC_PROG_CXX
+
+# транслируем архитектуру как её понимает компилятор, в то как её понимает
+# менеджер пакетов.
+case "$host_cpu" in
+x86_64)
+	DEB_ARCH=amd64
+	;;
+i686)
+	DEB_ARCH=i386
+	;;
+armv6l)
+	DEB_ARCH=armhf
+	;;
+*)
+	DEB_ARCH=$host_cpu
+esac
+
+CPPFLAGS_ORIG=$CPPFLAGS
+LDFLAGS_ORIG=$LDFLAGS
+
+CODENAME=none
+AC_ARG_WITH(codename, AS_HELP_STRING([--with-codename=NAME], [codename of target OS]), [
+		if test x"$withval" != "x"; then
+			CODENAME=$withval
+		fi
+	])
+AC_SUBST(CODENAME)
+AC_DEFINE_UNQUOTED(OS_CODENAME, ["$CODENAME"], [codename of target OS])
+
+# я решил отказаться от поддержки библиотеки libav т.к. она очень сильно
+# уреза. В виду того, что оригинальной библиотеки ffmpeg в Ubunut trusty и
+# его производных дистрибудтивах нет, я решил сделать собственный пакет,
+# который устанавливается с фиксированным префиксом /opt/mt который не
+# конфликтует с libav. Соответственно сдесь проводиться поиск как
+# в системных каталогах, так и в каталоге /opt/mt
+CPPFLAGS=$CPPFLAGS_ORIG
+LDFLAGS=$LDFLAGS_ORIG
+AC_CHECK_LIB(avcodec, av_packet_rescale_ts, [ AC_DEFINE(HAVE_GOOD_FFMPEG, 1) ], [
+		CPPFLAGS="$CPPFLAGS_ORIG -I/opt/mt/include"
+		LDFLAGS="$LDFLAGS_ORIG -L/opt/mt/lib"
+		AC_CHECK_LIB(avformat, av_register_all, [
+				AC_DEFINE(HAVE_MT_FFMPEG, 1)
+				CPPFLAGS_EXTRA="$CPPFLAGS_EXTRA -I/opt/mt/include"
+				LDFLAGS_EXTRA="$LDFLAGS_EXTRA -L/opt/mt/lib"
+			], [
+				AC_MSG_ERROR([ffmpeg library not found])
+			], [ ])
+	], [ ])
+
+CPPFLAGS="$CPPFLAGS_ORIG $CPPFLAGS_EXTRA"
+LDFLAGS="$LDFLAGS_ORIG $LDFLAGS_EXTRA"
+
+# передаем переменную окружения DEB_ARCH в препроцессор мейк-файла
+AC_SUBST(DEB_ARCH)
+
+# указываем в каких файлах должен препроцессор произвести подстановку
+# переменных. Аналогично как с AC_CONFIG_HEADER, ищется файл *.in
+# и на его основе генерируется файл.
+AC_CONFIG_FILES([Makefile])
+AC_CONFIG_FILES(deb/DEBIAN/control:deb_control.in)
+AC_CONFIG_FILES(deb_avc/DEBIAN/control:deb_avc_control.in)
+
+# даем команду произвести генерацию файлов
+AC_OUTPUT

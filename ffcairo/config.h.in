@@ -1,0 +1,19 @@
+#ifndef FFC_CONFIG
+#define FFC_CONFIG
+
+#undef OS_CODENAME
+
+#include <cairo/cairo.h>
+
+extern "C" {
+
+#include <libavcodec/avcodec.h>
+#include <libavformat/avformat.h>
+#include <libavutil/avstring.h>
+#include <libavutil/mathematics.h>
+#include <libavutil/opt.h>
+#include <libswscale/swscale.h>
+
+}
+
+#endif // FFC_CONFIG
