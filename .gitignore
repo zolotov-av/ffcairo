@@ -1,0 +1,21 @@
+
+# ./configure output
+Makefile
+config.log
+config.status
+/deb/DEBIAN/control
+/deb_avc/DEBIAN/control
+/ffcairo/config.h
+
+# compiled objects & libs
+*.o
+lib*.a
+
+# produces executables & logs
+/avc_feeder
+/avc_feeder.log
+/avc_server
+/avc_server.log
+/demo1-text
+/demo2-makevideo
+/demo3-remux
