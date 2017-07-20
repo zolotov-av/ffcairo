@@ -128,7 +128,7 @@ deb_ffcairo_install:
 	mkdir -p deb/usr/share/ffcairo/
 	install -m 0644 ffcairo/*.h deb/usr/include/
 	install -m 0644 libffcairo.a deb/usr/lib/
-	install -m 0644 README deb/usr/share/ffcairo/
+	install -m 0644 README.md deb/usr/share/ffcairo/
 	install -m 0644 Changelog deb/usr/share/ffcairo/
 
 .PHONY: deb_avc deb_avc_clean deb_avc_install
@@ -144,7 +144,7 @@ deb_avc_install:
 	mkdir -p deb_avc/usr/share/avc_server/
 	install -m 0755 avc_server deb_avc/usr/bin/
 	install -m 0755 avc_feeder deb_avc/usr/bin/
-	install -m 0644 README deb_avc/usr/share/avc_server/
+	install -m 0644 README.md deb_avc/usr/share/avc_server/
 	install -m 0644 Changelog deb_avc/usr/share/avc_server/
 
 ########################## BUILD RULES #######################################
