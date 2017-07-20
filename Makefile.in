@@ -34,19 +34,29 @@ DEB_ARCH:=@DEB_ARCH@
 # с пакетами, для какой ОС они собирались
 CODENAME:=@CODENAME@
 
+# configure может снабдить нас дополнительными опциями компилятора
+# так же мы можем передавать свои опции компилятора в configure
+# через одноименную переменную окружения и они появятся здесь
 CPPFLAGS=@CPPFLAGS@
-
-LDFLAGS=@LDFLAGS@
 
 # configure может снабдить нас дополнительными опциями компилятора
 # так же мы можем передавать свои опции компилятора в configure
 # через одноименную переменную окружения и они появятся здесь
 CXXFLAGS=@CXXFLAGS@
 
-# берем имя компилятора, которое дает нам configure и доплняем его опциями
+# configure может снабдить нас дополнительными опциями компилятора
+# так же мы можем передавать свои опции компилятора в configure
+# через одноименную переменную окружения и они появятся здесь
+LDFLAGS=@LDFLAGS@
+
+# компилятор для объектных модулей (без компоновки)
 CXX:=@CXX@ $(CPPFLAGS) $(CXXFLAGS) -ffunction-sections -I.
 
-LD=@CXX@ -Wl,--gc-sections
+# компоновщик
+LD:=@CXX@ $(LDFLAGS) -Wl,--gc-sections
+
+# компилятор+компоновщик
+CL:=@CXX@ $(CPPFLAGS) $(CXXFLAGS) $(LDFLAGS) -ffunction-sections -I. -Wl,--gc-sections
 
 LIBS=-lswscale -lavutil -lavformat -lavcodec -lcairo -lnano2 -lstdc++
 
@@ -93,6 +103,9 @@ LIBOBJECTS+=obj/avc_decoder.o
 
 # первая цель - главная, она будет запускаться когда цель явно не указана
 all: libffcairo.a progs
+
+.PHONY: full
+full: libffcairo.a progs demo test deb
 
 .PHONY: progs
 progs: $(PROGS)
@@ -150,19 +163,19 @@ deb_avc_install:
 ########################## BUILD RULES #######################################
 
 avc_server: avc_server.cpp libffcairo.a ffcairo/config.h
-	$(CXX) $(LDFLAGS) -o avc_server avc_server.cpp -L. -lffcairo $(LIBS) -ludns
+	$(CL) -o avc_server avc_server.cpp -L. -lffcairo $(LIBS) -ludns
 
 avc_feeder: avc_feeder.cpp libffcairo.a ffcairo/config.h
-	$(CXX) $(LDFLAGS) -o avc_feeder avc_feeder.cpp -L. -lffcairo $(LIBS) -ludns
+	$(CL) $(LDFLAGS) -o avc_feeder avc_feeder.cpp -L. -lffcairo $(LIBS) -ludns
 
 demo1-text: demo1-text.cpp libffcairo.a ffcairo/config.h
-	$(CXX) $(LDFLAGS) -o demo1-text demo1-text.cpp -L. -lffcairo $(LIBS)
+	$(CL) $(LDFLAGS) -o demo1-text demo1-text.cpp -L. -lffcairo $(LIBS)
 
 demo2-makevideo: demo2-makevideo.cpp libffcairo.a ffcairo/config.h
-	$(CXX) $(LDFLAGS) -o demo2-makevideo demo2-makevideo.cpp -L. -lffcairo $(LIBS)
+	$(CL) $(LDFLAGS) -o demo2-makevideo demo2-makevideo.cpp -L. -lffcairo $(LIBS)
 
 demo3-remux: demo3-remux.cpp libffcairo.a
-	$(CXX) $(LDFLAGS) -o demo3-remux demo3-remux.cpp -L. -lffcairo $(LIBS)
+	$(CL) $(LDFLAGS) -o demo3-remux demo3-remux.cpp -L. -lffcairo $(LIBS)
 
 libffcairo.a: $(LIBOBJECTS) ffcairo/config.h
 	$(AR) rc libffcairo.a $(LIBOBJECTS)
