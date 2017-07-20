@@ -15,6 +15,7 @@
 #include <ffcairo/avc_scene.h>
 
 #include <stdio.h>
+#include <signal.h>
 
 struct opts_t
 {
