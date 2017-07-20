@@ -92,7 +92,7 @@ LIBOBJECTS+=obj/avc_decoder.o
 .PHONY: all install deb clean distclean
 
 # первая цель - главная, она будет запускаться когда цель явно не указана
-all: libffcairo.a progs demo
+all: libffcairo.a progs
 
 .PHONY: progs
 progs: $(PROGS)
