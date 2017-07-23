@@ -38,6 +38,7 @@ void AVCListen::onAccept()
 	{
 		ptr<AVCChannel> ch = new AVCChannel(sock, engine);
 		engine->daemon->addObject(ch);
+		ch->init();
 		return;
 	}
 	

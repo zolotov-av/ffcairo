@@ -29,7 +29,7 @@ void AVCFeedStream::handleFrame()
 /**
 * Конструктор
 */
-AVCFeedAgent::AVCFeedAgent(NetDaemon *d): AVCAgent(d)
+AVCFeedAgent::AVCFeedAgent(NetDaemon *d): AVCAgent(d), streaming(0)
 {
 }
 
@@ -38,6 +38,70 @@ AVCFeedAgent::AVCFeedAgent(NetDaemon *d): AVCAgent(d)
 */
 AVCFeedAgent::~AVCFeedAgent()
 {
+}
+
+/**
+* Обработчик станзы feed
+*/
+void AVCFeedAgent::handleFeedStanza(EasyTag &stanza)
+{
+	std::string action = stanza["action"];
+	std::string status = stanza["status"];
+	
+	if ( action == "reply" )
+	{
+		if ( status == "allow" )
+		{
+			if ( ! muxer->openAVIO() )
+			{
+				printf("fail to openAVIO()\n");
+				exit(-1);
+			}
+			
+			streaming = 1;
+			
+			// отладочная станза
+			EasyTag notify("feed");
+			notify["action"] = "notify";
+			notify["message"] = "stream opened";
+			sendStanza(notify);
+			
+			return;
+		}
+		
+		if ( status == "deny" )
+		{
+			std::string message = stanza["message"];
+			printf("server rejected feed: %s\n", message.c_str());
+			failStreaming();
+			return;
+		}
+		
+		return;
+	}
+	
+	if ( action == "notify" )
+	{
+		if ( status == "streaming" )
+		{
+			printf("server opened stream\n");
+			return;
+		}
+	}
+}
+
+/**
+* Обработчик станзы
+*/
+void AVCFeedAgent::onStanza(EasyTag stanza)
+{
+	std::string name = stanza.name();
+	
+	if ( name == "feed" )
+	{
+		handleFeedStanza(stanza);
+		return;
+	}
 }
 
 /**
@@ -64,29 +128,16 @@ void AVCFeedAgent::onConnect()
 {
 	printf("AVCFeedAgent::onConnect()\n");
 	
-	// TODO убрать/пересмотреть, просто тест станз
-	EasyTag hello("hello");
-	hello["host"].setAttribute("type", "feeder");
-	sendStanza(hello);
+	// поприветствуем сервер
+	EasyTag tag("hello");
+	tag["host"].setAttribute("type", "feeder");
+	tag["name"] = "avc_feeder";
+	sendStanza(tag);
 	
-	avc_packet_t pkt;
-	pkt.channel = 0;
-	pkt.type = 1;
-	avc_set_packet_len(&pkt, sizeof(pkt));
-	if ( ! sendPacket(&pkt) )
-	{
-		printf("fail to sendPacket()\n");
-		exit(-1);
-	}
-	
-	if ( ! muxer->openAVIO() )
-	{
-		printf("fail to openAVIO()\n");
-		exit(-1);
-	}
-	
-	//int ret = av_write_frame(muxer->avFormat, 0);
-	//printf("av_write_frame(flush), ret = %d\n", ret);
+	tag = EasyTag("feed");
+	tag["action"] = "request";
+	tag["type"] = "avFormat";
+	sendStanza(tag);
 }
 
 /**
@@ -352,11 +403,14 @@ int AVCFeedAgent::openFeed(int width, int height, int64_t bit_rate)
 */
 void AVCFeedAgent::onTimer(const timeval &tv)
 {
-	bool ret = demux->readFrame();
-	if ( ! ret )
+	if ( streaming )
 	{
-		printf("readFrame failed\n");
-		failStreaming();
-		return;
+		bool ret = demux->readFrame();
+		if ( ! ret )
+		{
+			printf("readFrame failed\n");
+			failStreaming();
+			return;
+		}
 	}
 }

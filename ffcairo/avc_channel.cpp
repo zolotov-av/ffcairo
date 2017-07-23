@@ -48,6 +48,53 @@ AVCChannel::~AVCChannel()
 }
 
 /**
+* Инициализация
+*
+* Вызывается из AVCListen после добавления в обработку
+*/
+void AVCChannel::init()
+{
+	// поздороваеся с клиентом
+	EasyTag hello("hello");
+	hello["host"].setAttribute("type", "server");
+	hello["name"] = "avc_server";
+	sendStanza(hello);
+}
+
+/**
+* Обработчик станды feed
+*/
+void AVCChannel::handleFeedStanza(EasyTag &stanza)
+{
+	std::string action = stanza["action"];
+	
+	if ( action == "request" )
+	{
+		std::string feed_type = stanza["type"];
+		
+		if ( feed_type == "avFormat" )
+		{
+			EasyTag reply("feed");
+			reply["action"] = "reply";
+			reply["type"] = feed_type;
+			reply["status"] = "allow";
+			sendStanza(reply);
+			
+			handleNewFeed();
+			return;
+		}
+		
+		EasyTag reply("feed");
+		reply["action"] = "reply";
+		reply["type"] = feed_type;
+		reply["status"] = "deny";
+		reply["message"] = "wrong type '" + feed_type + "' unsupported";
+		sendStanza(reply);
+		return;
+	}
+}
+
+/**
 * Обработчик чтения пакета из потока
 */
 int AVCChannel::real_read_packet(uint8_t *buf, int buf_size)
@@ -107,15 +154,6 @@ void AVCChannel::onPacket(const AVCPacket *pkt)
 {
 	//printf("onPacket() type=%d, channel=%d, size=%d, state=%d\n", pkt->type(), pkt->channel(), pkt->size(), feed_state);
 	
-	if ( pkt->channel() == 0 )
-	{
-		if ( pkt->type() == 1 )
-		{
-			handleNewFeed();
-			return;
-		}
-	}
-	
 	if ( pkt->channel() == 2 && pkt->type() == AVC_PAYLOAD )
 	{
 		if ( feed_state == FEED_OPEN_INPUT )
@@ -139,7 +177,17 @@ void AVCChannel::onPacket(const AVCPacket *pkt)
 */
 void AVCChannel::onStanza(EasyTag stanza)
 {
-	// TODO
+	if ( stanza.name() == "hello" )
+	{
+		//handleHello();
+		return;
+	}
+	
+	if ( stanza.name() == "feed" )
+	{
+		handleFeedStanza(stanza);
+		return;
+	}
 }
 
 /**
@@ -195,12 +243,23 @@ void AVCChannel::handleFeedData()
 			
 			if ( ! openVideoStream() )
 			{
+				EasyTag tag("feed");
+				tag["action"] = "abort";
+				tag["status"] = "failure";
+				tag["message"] = "openVideoStream() failed";
+				sendStanza(tag);
+				
 				printf("fail to openVideoStream()\n");
 				close();
 				exit(-1);
 			}
 			
 			feed_state = FEED_STREAMING;
+			
+			EasyTag notify("feed");
+			notify["action"] = "notify";
+			notify["status"] = "streaming";
+			sendStanza(notify);
 			
 			engine->scene->replaceFeed(this);
 		}
@@ -267,11 +326,6 @@ void AVCChannel::handleNewFeed()
 	if ( feed_state == FEED_WAIT )
 	{
 		feed_state = FEED_OPEN_INPUT;
-		
-		// TODO убрать, это просто проверка работы станз
-		EasyTag test("feed");
-		test["status"] = "init";
-		sendStanza(test);
 		
 		return;
 	}

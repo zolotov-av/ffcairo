@@ -127,7 +127,19 @@ public:
 	 */
 	virtual ~AVCChannel();
 	
+	/**
+	 * Инициализация
+	 *
+	 * Вызывается из AVCListen после добавления в обработку
+	 */
+	void init();
+	
 protected:
+	
+	/**
+	 * Обработчик станды feed
+	 */
+	void handleFeedStanza(EasyTag &stanza);
 	
 	/**
 	 * Обработчик чтения пакета из потока

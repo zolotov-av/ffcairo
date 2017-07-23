@@ -52,6 +52,11 @@ friend class AVCFeedStream;
 public:
 	
 	/**
+	 * флаг стриминга
+	 */
+	int streaming;
+	
+	/**
 	 * Опции видео-кодека
 	 */
 	FFCVideoOptions opts;
@@ -112,6 +117,16 @@ public:
 	~AVCFeedAgent();
 	
 protected:
+	
+	/**
+	 * Обработчик станзы feed
+	 */
+	void handleFeedStanza(EasyTag &stanza);
+	
+	/**
+	 * Обработчик станзы
+	 */
+	virtual void onStanza(EasyTag stanza);
 	
 	/**
 	 * Обработчик записи пакета в поток
