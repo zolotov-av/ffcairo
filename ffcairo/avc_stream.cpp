@@ -1,6 +1,7 @@
 
 #include <ffcairo/avc_stream.h>
 #include <nanosoft/debug.h>
+#include <nanosoft/tagparser.h>
 
 /**
 * Конструктор
@@ -14,6 +15,53 @@ AVCStream::AVCStream(int afd): AsyncStream(afd), read_state(WAIT_HEADER)
 */
 AVCStream::~AVCStream()
 {
+}
+
+/**
+* Парсер станзы
+*/
+static EasyTag parseStanza(const AVCPacket *pkt)
+{
+	TagParser parser;
+	return parser.parse(pkt->data, pkt->size());
+}
+
+/**
+* Обработка станзы
+*/
+void AVCStream::handleStanza(const AVCPacket *pkt)
+{
+	EasyTag stanza = parseStanza(pkt);
+	if ( stanza.isTag() )
+	{
+		if ( DEBUG::DUMP_STANZA )
+		{
+			fprintf(stdout, "RECV STANZA[%d]: \033[22;32m%s\033[0m\n", getFd(), stanza.serialize().c_str());
+		}
+		onStanza(stanza);
+	}
+	else
+	{
+		printf("stanza parse error: %s", stanza.cdata().c_str());
+	}
+}
+
+/**
+* Обработка пакета
+*/
+void AVCStream::handlePacket(const AVCPacket *pkt)
+{
+	if ( pkt->channel() == 0 )
+	{
+		if ( pkt->type() == AVC_STANZA )
+		{
+			handleStanza(pkt);
+			return;
+		}
+	}
+	
+	// пока для совместимости, пока непонятно как все раскидать по функциям
+	onPacket(pkt);
 }
 
 /**
@@ -59,7 +107,7 @@ void AVCStream::onRead(const char *data, size_t len)
 			else
 			{
 				// если пакет пустой, то сразу его обработать
-				onPacket(&packet);
+				handlePacket(&packet);
 				continue;
 			}
 		}
@@ -72,7 +120,7 @@ void AVCStream::onRead(const char *data, size_t len)
 			read_size += ret;
 			if ( read_size == plen )
 			{
-				onPacket(&packet);
+				handlePacket(&packet);
 				read_state = WAIT_HEADER;
 				continue;
 			}
@@ -97,6 +145,56 @@ void AVCStream::onPeerDown()
 */
 bool AVCStream::sendPacket(const avc_packet_t *pkt)
 {
-	if ( DEBUG::DUMP_STANZA ) avc_dump_packet("SEND", pkt);
+	//if ( DEBUG::DUMP_STANZA ) avc_dump_packet("SEND", pkt);
 	return put( (const char*)pkt, avc_packet_len(pkt) );
+}
+
+/**
+* Отправить пакет
+*/
+bool AVCStream::sendPacket(const AVCPacket *pkt)
+{
+	// TODO реализовать транзакции в NetDaemon
+	bool ret = put((const char*) &pkt->header, sizeof(pkt->header));
+	if ( ! ret ) return false;
+	ret = put( (const char*)&pkt, pkt->size() );
+	if ( ! ret )
+	{
+		printf("AVCStream::put(header) failed\n");
+		close();
+		exit(-1);
+	}
+	
+	return true;
+}
+
+/**
+* Отправить станзу в поток
+*/
+bool AVCStream::sendStanza(EasyTag stanza)
+{
+	std::string text = stanza.serialize();
+	
+	if ( DEBUG::DUMP_STANZA )
+	{
+		fprintf(stdout, "SEND STANZA[%d]: \033[22;34m%s\033[0m\n", getFd(), text.c_str());
+	}
+	
+	avc_packet_t pkt;
+	pkt.channel = 0;
+	pkt.type = AVC_STANZA;
+	avc_set_packet_len(&pkt, text.length() + 4);
+	
+	// TODO реализовать транзакции в NetDaemon
+	bool ret = put((const char*) &pkt, sizeof(pkt));
+	if ( ! ret ) return false;
+	ret = put(text.c_str(), text.length());
+	if ( ! ret )
+	{
+		printf("AVCStream::put(header) failed\n");
+		close();
+		exit(-1);
+	}
+	
+	return true;
 }

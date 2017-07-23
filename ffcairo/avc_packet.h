@@ -6,6 +6,7 @@
 
 #define AVC_SIMPLE 1
 #define AVC_PAYLOAD 2
+#define AVC_STANZA 3
 
 /**
  * Базовая структура всех передаваемых пакетов

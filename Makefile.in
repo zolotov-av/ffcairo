@@ -164,10 +164,10 @@ deb_avc_install:
 ########################## BUILD RULES #######################################
 
 avc_server: avc_server.cpp libffcairo.a ffcairo/config.h
-	$(CL) -o avc_server avc_server.cpp -L. -lffcairo $(LIBS) -ludns
+	$(CL) -o avc_server avc_server.cpp -L. -lffcairo $(LIBS) -ludns -lexpat
 
 avc_feeder: avc_feeder.cpp libffcairo.a ffcairo/config.h
-	$(CL) $(LDFLAGS) -o avc_feeder avc_feeder.cpp -L. -lffcairo $(LIBS) -ludns
+	$(CL) $(LDFLAGS) -o avc_feeder avc_feeder.cpp -L. -lffcairo $(LIBS) -ludns -lexpat
 
 demo1-text: demo1-text.cpp libffcairo.a ffcairo/config.h
 	$(CL) $(LDFLAGS) -o demo1-text demo1-text.cpp -L. -lffcairo $(LIBS)

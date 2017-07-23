@@ -135,6 +135,14 @@ void AVCChannel::onPacket(const AVCPacket *pkt)
 }
 
 /**
+* Обработчик станзы
+*/
+void AVCChannel::onStanza(EasyTag stanza)
+{
+	// TODO
+}
+
+/**
 * буферизовать пакет
 */
 void AVCChannel::queuePacket(const AVCPacket *pkt)
@@ -259,6 +267,12 @@ void AVCChannel::handleNewFeed()
 	if ( feed_state == FEED_WAIT )
 	{
 		feed_state = FEED_OPEN_INPUT;
+		
+		// TODO убрать, это просто проверка работы станз
+		EasyTag test("feed");
+		test["status"] = "init";
+		sendStanza(test);
+		
 		return;
 	}
 }

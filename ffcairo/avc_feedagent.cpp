@@ -64,6 +64,11 @@ void AVCFeedAgent::onConnect()
 {
 	printf("AVCFeedAgent::onConnect()\n");
 	
+	// TODO убрать/пересмотреть, просто тест станз
+	EasyTag hello("hello");
+	hello["host"].setAttribute("type", "feeder");
+	sendStanza(hello);
+	
 	avc_packet_t pkt;
 	pkt.channel = 0;
 	pkt.type = 1;

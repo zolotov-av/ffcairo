@@ -153,6 +153,11 @@ protected:
 	virtual void onPacket(const AVCPacket *pkt);
 	
 	/**
+	 * Обработчик станзы
+	 */
+	virtual void onStanza(EasyTag stanza);
+	
+	/**
 	 * буферизовать пакет
 	 */
 	void queuePacket(const AVCPacket *pkt);

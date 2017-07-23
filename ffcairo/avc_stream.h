@@ -4,6 +4,7 @@
 #include <ffcairo/avc_packet.h>
 #include <nanosoft/asyncstream.h>
 #include <nanosoft/bufferstream.h>
+#include <nanosoft/easytag.h>
 
 /**
  * Класс AVCStream
@@ -59,6 +60,18 @@ public:
 	 */
 	virtual ~AVCStream();
 	
+private:
+	
+	/**
+	 * Обработка станзы
+	 */
+	void handleStanza(const AVCPacket *pkt);
+	
+	/**
+	 * Обработка пакета
+	 */
+	void handlePacket(const AVCPacket *pkt);
+	
 protected:
 	
 	/**
@@ -70,6 +83,11 @@ protected:
 	 * Обработчик пакета
 	 */
 	virtual void onPacket(const AVCPacket *pkt) = 0;
+	
+	/**
+	 * Обработчик станзы
+	 */
+	virtual void onStanza(EasyTag stanza) = 0;
 	
 	/**
 	 * Пир (peer) закрыл поток.
@@ -85,6 +103,17 @@ public:
 	 * Отправить пакет
 	 */
 	bool sendPacket(const avc_packet_t *pkt);
+	
+	/**
+	 * Отправить пакет
+	 */
+	bool sendPacket(const AVCPacket *pkt);
+	
+	/**
+	 * Отправить станзу в поток
+	 */
+	bool sendStanza(EasyTag stanza);
+	
 };
 
 

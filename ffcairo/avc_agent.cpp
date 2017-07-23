@@ -36,6 +36,13 @@ void AVCAgent::onPacket(const AVCPacket *pkt)
 }
 
 /**
+* Обработчик станзы
+*/
+void AVCAgent::onStanza(EasyTag stanza)
+{
+}
+
+/**
 * Создать сокет
 *
 * Временная функция...

@@ -42,6 +42,11 @@ protected:
 	 */
 	virtual void onPacket(const AVCPacket *pkt);
 	
+	/**
+	 * Обработчик станзы
+	 */
+	virtual void onStanza(EasyTag stanza);
+	
 public:
 	
 	/**
