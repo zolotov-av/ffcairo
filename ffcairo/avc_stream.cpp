@@ -3,52 +3,9 @@
 #include <nanosoft/debug.h>
 
 /**
-* Установить размер пакета
-*/
-bool avc_set_packet_len(avc_packet_t *pkt, int len)
-{
-	if ( len < 4 || len > 0xFFFF )
-	{
-		pkt->len[0] = 0;
-		pkt->len[1] = 0;
-		return false;
-	}
-	
-	pkt->len[0] = len & 0xFF;
-	pkt->len[1] = (len >> 8) & 0xFF;
-}
-
-/**
- * Вывести пакет в отладочный вывод
- */
-void avc_dump_packet(const char *act, const avc_packet_t *pkt)
-{
-	char buf[80];
-	char *p;
-	int plen = avc_packet_len(pkt);
-	const uint8_t *data = (const uint8_t*)pkt;
-	printf("%s PACKET type=0x%02X channel=0x%02X len=0x%04X (%d)\n", act, pkt->type, pkt->channel, plen, plen);
-	
-	while ( plen > 0 )
-	{
-		int len = plen;
-		if ( len > 16 ) len = 16;
-		p = buf;
-		for(int i = 0; i < len; i++)
-		{
-			p += sprintf(p, "%02X ", *data++);
-			plen--;
-		}
-		printf("%s\n", buf);
-		
-		break;
-	}
-}
-
-/**
 * Конструктор
 */
-AVCStream::AVCStream(int afd): AsyncStream(afd), buf_len(0)
+AVCStream::AVCStream(int afd): AsyncStream(afd), read_state(WAIT_HEADER)
 {
 }
 
@@ -64,40 +21,65 @@ AVCStream::~AVCStream()
 */
 void AVCStream::onRead(const char *data, size_t len)
 {
-	do
+	size_t ret = bs.write(data, len);
+	if ( ret < len )
 	{
-		// наполняем буфер хотя бы до 2х байт чтобы у нас была информация о
-		// длине пакета
-		while ( buf_len < 2 && len > 0 )
+		// TODO
+		printf("AVCStream::onRead() read buffer full\n");
+		close();
+		exit(-1);
+	}
+	
+	while ( 1 )
+	{
+		if ( read_state == WAIT_HEADER )
 		{
-			buf[buf_len] = *data;
-			buf_len++;
-			data++;
-			len--;
+			// если данных недостаточно чтобы прочитать заголовок, то выходим
+			if ( bs.getDataSize() < sizeof(packet.header) ) return;
+			
+			// читаем заголовок пакета
+			bs.read(&packet.header, sizeof(packet.header));
+			
+			// в пакете есть нагрузка?
+			size_t plen = avc_packet_payload(&packet.header);
+			if ( plen > 0 )
+			{
+				// если в пакете есть нагрузка, то подготовить буфер и перейти
+				// к чтению данных
+				if ( ! packet.reset(plen) )
+				{
+					// TODO
+					printf("packet.reset() failed\n");
+					close();
+					exit(-1);
+				}
+				read_size = 0;
+				read_state = READ_DATA;
+			}
+			else
+			{
+				// если пакет пустой, то сразу его обработать
+				onPacket(&packet);
+				continue;
+			}
 		}
 		
-		// если не смогли наполнить буфер, значит входные данные кончились
-		if ( buf_len < 2 ) return;
-		
-		const avc_packet_t *p = (const avc_packet_t*)buf;
-		int plen = avc_packet_len(p);
-		
-		// наполняем буфер до размера пакета
-		size_t xlen = plen - buf_len; // размер который надо дополнить
-		if ( xlen > len ) xlen = len; // копируем сколько есть
-		memcpy(buf + buf_len, data, xlen);
-		buf_len += xlen;
-		data += xlen;
-		len -= xlen;
-		
-		// если не смогли наполнить буфер, значит входные данные кончились
-		if ( buf_len < plen ) return;
-		
-		if ( DEBUG::DUMP_STANZA ) avc_dump_packet("READ", p);
-		onPacket(p);
-		buf_len = 0;
+		if ( read_state == READ_DATA )
+		{
+			size_t plen = avc_packet_payload(&packet.header);
+			size_t rest = plen - read_size;
+			size_t ret = bs.read(packet.data + read_size, rest);
+			read_size += ret;
+			if ( read_size == plen )
+			{
+				onPacket(&packet);
+				read_state = WAIT_HEADER;
+				continue;
+			}
+			
+			if ( bs.getDataSize() == 0 ) return;
+		}
 	}
-	while ( len > 0 );
 }
 
 /**

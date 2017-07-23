@@ -103,20 +103,20 @@ void AVCChannel::onPeerDown()
 /**
 * Обработчик пакета
 */
-void AVCChannel::onPacket(const avc_packet_t *pkt)
+void AVCChannel::onPacket(const AVCPacket *pkt)
 {
-	//printf("onPacket() type=%d, channel=%d, size=%d, state=%d\n", pkt->type, pkt->channel, avc_packet_len(pkt), feed_state);
+	//printf("onPacket() type=%d, channel=%d, size=%d, state=%d\n", pkt->type(), pkt->channel(), pkt->size(), feed_state);
 	
-	if ( pkt->channel == 0 )
+	if ( pkt->channel() == 0 )
 	{
-		if ( pkt->type == 1 )
+		if ( pkt->type() == 1 )
 		{
 			handleNewFeed();
 			return;
 		}
 	}
 	
-	if ( pkt->channel == 2 && pkt->type == AVC_PAYLOAD )
+	if ( pkt->channel() == 2 && pkt->type() == AVC_PAYLOAD )
 	{
 		if ( feed_state == FEED_OPEN_INPUT )
 		{
@@ -137,10 +137,9 @@ void AVCChannel::onPacket(const avc_packet_t *pkt)
 /**
 * буферизовать пакет
 */
-void AVCChannel::queuePacket(const avc_packet_t *pkt)
+void AVCChannel::queuePacket(const AVCPacket *pkt)
 {
-	avc_payload_t *p = (avc_payload_t *)pkt;
-	int ret = pktbuf.write(p->buf, avc_packet_payload(p));
+	int ret = pktbuf.write(pkt->data, pkt->size());
 	if ( ret == 0 )
 	{
 		printf("queue full\n");

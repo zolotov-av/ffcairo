@@ -6,9 +6,8 @@
 #include <ffcairo/ffcdemuxer.h>
 #include <ffcairo/ffcimage.h>
 #include <ffcairo/scale.h>
+#include <ffcairo/avc_packet.h>
 #include <nanosoft/bufferstream.h>
-
-#define MAX_PACKET_COUNT 5000
 
 class AVCChannel;
 
@@ -151,12 +150,12 @@ protected:
 	/**
 	 * Обработчик пакета
 	 */
-	virtual void onPacket(const avc_packet_t *pkt);
+	virtual void onPacket(const AVCPacket *pkt);
 	
 	/**
 	 * буферизовать пакет
 	 */
-	void queuePacket(const avc_packet_t *pkt);
+	void queuePacket(const AVCPacket *pkt);
 	
 	/**
 	 * прочитать данные из очереди

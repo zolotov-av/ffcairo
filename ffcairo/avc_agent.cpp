@@ -31,7 +31,7 @@ void AVCAgent::onPeerDown()
 /**
 * Обработчик пакета
 */
-void AVCAgent::onPacket(const avc_packet_t *pkt)
+void AVCAgent::onPacket(const AVCPacket *pkt)
 {
 }
 

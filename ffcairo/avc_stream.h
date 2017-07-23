@@ -1,74 +1,9 @@
 #ifndef AVC_STREAM_H
 #define AVC_STREAM_H
 
+#include <ffcairo/avc_packet.h>
 #include <nanosoft/asyncstream.h>
-
-#define AVC_SIMPLE 1
-#define AVC_PAYLOAD 2
-
-/**
- * Базовая структура всех передаваемых пакетов
- */
-struct avc_packet_t
-{
-	/**
-	 * Размер пакета включая заголовки, т.е. размер пакета не может быть
-	 * меньше 4 байт
-	 */
-	uint8_t len[2];
-	
-	/**
-	 * Тип пакета
-	 */
-	uint8_t type;
-	
-	/**
-	 * Канал
-	 */
-	uint8_t channel;
-};
-
-/**
- * Структура описывающая сигнальные сообщения
- */
-struct avc_message_t: public avc_packet_t
-{
-	
-};
-
-/**
- * Структура описывающая потоковые данные
- */
-struct avc_payload_t: public avc_packet_t
-{
-	char buf[1020];
-};
-
-/**
- * Возвращает длину пакета
- */
-inline int avc_packet_len(const avc_packet_t *pkt)
-{
-	return pkt->len[0] + pkt->len[1] * 256;
-}
-
-/**
- * Возвращает длину содержимого пакета
- */
-inline int avc_packet_payload(const avc_packet_t *pkt)
-{
-	return avc_packet_len(pkt) - 4;
-}
-
-/**
- * Установить размер пакета
- */
-bool avc_set_packet_len(avc_packet_t *pkt, int len);
-
-/**
- * Вывести пакет в отладочный вывод
- */
-void avc_dump_packet(const char *act, const avc_packet_t *pkt);
+#include <nanosoft/bufferstream.h>
 
 /**
  * Класс AVCStream
@@ -81,17 +16,36 @@ void avc_dump_packet(const char *act, const avc_packet_t *pkt);
  */
 class AVCStream: public AsyncStream
 {
-protected:
+private:
+	
+	enum {
+		
+		/**
+		 * Ожидание заголовка пакета
+		 */
+		WAIT_HEADER,
+		
+		/**
+		 * Чтение данных
+		 */
+		READ_DATA
+		
+	} read_state;
 	
 	/**
-	 * Буфер для временных данных
+	 * Размер прочитанной части пакета
 	 */
-	char buf[4096];
+	size_t read_size;
 	
 	/**
-	 * Размер буферизованных данных
+	 * Пакет
 	 */
-	int buf_len;
+	AVCPacket packet;
+	
+	/**
+	 * Буфер
+	 */
+	BufferStream bs;
 	
 public:
 	
@@ -115,7 +69,7 @@ protected:
 	/**
 	 * Обработчик пакета
 	 */
-	virtual void onPacket(const avc_packet_t *pkt) = 0;
+	virtual void onPacket(const AVCPacket *pkt) = 0;
 	
 	/**
 	 * Пир (peer) закрыл поток.

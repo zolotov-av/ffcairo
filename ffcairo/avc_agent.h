@@ -40,7 +40,7 @@ protected:
 	/**
 	 * Обработчик пакета
 	 */
-	virtual void onPacket(const avc_packet_t *pkt);
+	virtual void onPacket(const AVCPacket *pkt);
 	
 public:
 	

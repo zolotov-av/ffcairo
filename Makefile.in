@@ -86,6 +86,7 @@ LIBOBJECTS+=obj/ffcmisc.o
 #
 LIBOBJECTS+=obj/avc_engine.o
 LIBOBJECTS+=obj/avc_listen.o
+LIBOBJECTS+=obj/avc_packet.o
 LIBOBJECTS+=obj/avc_stream.o
 LIBOBJECTS+=obj/avc_channel.o
 LIBOBJECTS+=obj/avc_agent.o
@@ -204,7 +205,10 @@ obj/avc_engine.o: ffcairo/avc_engine.cpp ffcairo/avc_engine.h
 obj/avc_listen.o: ffcairo/avc_listen.cpp ffcairo/avc_listen.h ffcairo/avc_engine.h
 	$(CXX) -c ffcairo/avc_listen.cpp -o obj/avc_listen.o
 
-obj/avc_stream.o: ffcairo/avc_stream.cpp ffcairo/avc_stream.h
+obj/avc_packet.o: ffcairo/avc_packet.cpp ffcairo/avc_packet.h
+	$(CXX) -c ffcairo/avc_packet.cpp -o obj/avc_packet.o
+
+obj/avc_stream.o: ffcairo/avc_stream.cpp ffcairo/avc_stream.h ffcairo/avc_packet.h
 	$(CXX) -c ffcairo/avc_stream.cpp -o obj/avc_stream.o
 
 obj/avc_channel.o: ffcairo/avc_channel.cpp ffcairo/avc_channel.h ffcairo/avc_stream.h ffcairo/avc_engine.h
